@@ -20,7 +20,7 @@ export async function POST(request) {
         price: newPrice,
       },
     };
-    const result = await inventory.update(filter, updateDoc,{});
+    const result = await inventory.updateOne(filter, updateDoc,{});
     if (result.matchedCount && result.modifiedCount) {
         return NextResponse.json({
           success: true,

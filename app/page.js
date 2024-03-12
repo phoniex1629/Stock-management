@@ -71,23 +71,17 @@ export default function Home() {
 
   const updateProduct = async () => {
     let index = products.findIndex((item) => item.slug == editId);
-
     console.log(index);
-
     let newProducts = JSON.parse(JSON.stringify(products));
-
     newProducts[index].slug = updateProductForm?.slug;
     newProducts[index].quantity = updateProductForm?.updateQuantity;
     newProducts[index].price = updateProductForm?.updatePrice;
-    
 
     console.log(products);
 
     let newSlug = updateProductForm?.slug;
     let newQuantity = updateProductForm?.updateQuantity;
     let newPrice = updateProductForm?.updatePrice;
-
-    console.log(updateProductForm);
 
     setProducts(newProducts);
 
