@@ -1,113 +1,491 @@
+"use client";
+
 import Image from "next/image";
+import Header from "./components/header";
+import { useState, useEffect } from "react";
+import { FaPen } from "react-icons/fa";
 
 export default function Home() {
+  const [productForm, setProductForm] = useState({});
+  const [updateProductForm, setUpdateProductForm] = useState({});
+  const [products, setProducts] = useState([]);
+  const [alert, setAlert] = useState("");
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [dropdown, setDropdown] = useState([]);
+  const [popup, setPopup] = useState(false);
+  const [editId, updateEditId] = useState("");
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      const response = await fetch("/api/product");
+      let rjson = await response.json();
+      setProducts(rjson.products);
+    };
+    fetchProduct();
+  }, []);
+
+  const addProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/product", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productForm),
+      });
+
+      if (response.ok) {
+        console.log("Product added successfully!");
+        setAlert("Your product has been added successfully");
+        setProductForm({});
+        // You can add additional logic or state updates here
+      } else {
+        console.error("Failed to add product");
+      }
+    } catch (error) {
+      console.error("Error adding product:", error);
+    }
+    const response = await fetch("/api/product");
+    let rjson = await response.json();
+    setProducts(rjson.products);
+  };
+
+  const handleChange = (e) => {
+    setProductForm({ ...productForm, [e.target.name]: e.target.value });
+  };
+
+  const handleUpdateChange = (e) => {
+    setUpdateProductForm({
+      ...updateProductForm,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const clicked = (slug) => {
+    setPopup(true);
+    updateEditId(slug);
+  };
+
+  const updateProduct = async () => {
+    let index = products.findIndex((item) => item.slug == editId);
+
+    console.log(index);
+
+    let newProducts = JSON.parse(JSON.stringify(products));
+
+    newProducts[index].slug = updateProductForm?.slug;
+    newProducts[index].quantity = updateProductForm?.updateQuantity;
+    newProducts[index].price = updateProductForm?.updatePrice;
+    
+
+    console.log(products);
+
+    let newSlug = updateProductForm?.slug;
+    let newQuantity = updateProductForm?.updateQuantity;
+    let newPrice = updateProductForm?.updatePrice;
+
+    console.log(updateProductForm);
+
+    setProducts(newProducts);
+
+    setLoadingAction(true);
+    const response = await fetch("/api/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ editId, newSlug, newQuantity, newPrice }),
+    });
+    setLoadingAction(false);
+    setPopup(false);
+  };
+
+  const onDropDownEdit = async (e) => {
+    let value = e.target.value;
+    setQuery(value);
+    if (value.length > 1) {
+      setLoading(true);
+      setDropdown([]);
+      const response = await fetch("/api/search?query=" + query);
+      let rjson = await response.json();
+      setDropdown(rjson.products);
+    } else {
+      setDropdown([]);
+    }
+    setLoading(false);
+  };
+
+  const buttonAction = async (action, slug, initialQuantity) => {
+    let index = products.findIndex((item) => item.slug == slug);
+    let indexDrop = dropdown.findIndex((item) => item.slug == slug);
+
+    let newProducts = JSON.parse(JSON.stringify(products));
+    let newDropdown = JSON.parse(JSON.stringify(dropdown));
+
+    if (action == "plus") {
+      newProducts[index].quantity = parseInt(initialQuantity) + 1;
+      newDropdown[indexDrop].quantity = parseInt(initialQuantity) + 1;
+    } else {
+      newProducts[index].quantity = parseInt(initialQuantity) - 1;
+      newDropdown[indexDrop].quantity = parseInt(initialQuantity) - 1;
+    }
+
+    setProducts(newProducts);
+    setDropdown(newDropdown);
+
+    setLoadingAction(true);
+    const response = await fetch("/api/action", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action, slug, initialQuantity }),
+    });
+    setLoadingAction(false);
+  };
+
+  const displayButtonAction = async (action, slug, initialQuantity) => {
+    let index = products.findIndex((item) => item.slug == slug);
+
+    let newProducts = JSON.parse(JSON.stringify(products));
+
+    if (action == "plus") {
+      newProducts[index].quantity = parseInt(initialQuantity) + 1;
+    } else {
+      newProducts[index].quantity = parseInt(initialQuantity) - 1;
+    }
+
+    setProducts(newProducts);
+
+    setLoadingAction(true);
+    const response = await fetch("/api/action", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action, slug, initialQuantity }),
+    });
+    let r = response.json();
+    setLoadingAction(false);
+  };
+
+  useEffect(() => {
+    if (alert) {
+      const timer = setTimeout(() => {
+        setAlert("");
+      }, 3000);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [alert]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+    <>
+      <Header />
+
+      {/* Display current Stock */}
+      <div className="container mx-auto bg-red-50">
+        <h1 className="text-3xl font-bold mb-4 mx-20">Search a Product</h1>
+
+        {/* Search Product Form */}
+        <form className="my-4 w-full max-w-md mx-auto">
+          {/* Search Input Field */}
+          <div className="flex items-center border-b border-blue-500 py-2">
+            <input
+              type="text"
+              placeholder="Enter product name"
+              className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
+              onChange={onDropDownEdit}
+              // Add your onChange and value handlers as needed
             />
-          </a>
+            <button
+              type="button"
+              className="flex-shrink-0 bg-blue-500 text-white py-1 px-2 rounded hover:bg-blue-700"
+            >
+              Search
+            </button>
+          </div>
+
+          {/* Dropdown (replace this with your actual dropdown implementation) */}
+          <div className="mt-4">
+            {/* Your dropdown code goes here */}
+            <select
+              className="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+              // Add your onChange and value handlers as needed
+            >
+              <option value="all">All Categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="clothing">Clothing</option>
+              {/* Add more categories as needed */}
+            </select>
+          </div>
+          <div className="flex justify-center">
+            {loading && (
+              <svg
+                width="50px"
+                height="50px"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="xMidYMid"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="black"
+              >
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="30"
+                  stroke-width="10"
+                  stroke="#000"
+                  stroke-dasharray="47.12388980384689 47.12388980384689"
+                  fill="none"
+                  stroke-linecap="round"
+                >
+                  <animateTransform
+                    attributeName="transform"
+                    type="rotate"
+                    repeatCount="indefinite"
+                    dur="1s"
+                    keyTimes="0;1"
+                    values="0 50 50;360 50 50"
+                  ></animateTransform>
+                </circle>
+              </svg>
+            )}
+          </div>
+
+          <div className="w-[30vw] bg-purple-100 rounded-md mx-auto">
+            <div className="container">
+              {dropdown.length > 0 && (
+                <div className="flex justify-between py-2 border-b-2 font-bold items-center">
+                  <span className="w-1/3 text-center">Product</span>
+                  <span className="w-1/3 text-center">Quantity</span>
+                  <span className="w-1/3 text-center">Price</span>
+                </div>
+              )}
+
+              {dropdown.map((item) => (
+                <div
+                  className="flex justify-between py-2 border-b-2"
+                  key={item.id}
+                >
+                  <span className="w-1/3 text-center">{item.slug}</span>
+                  <div className="w-1/3 flex justify-between">
+                    <button
+                      onClick={() => {
+                        buttonAction("minus", item.slug, item.quantity);
+                      }}
+                      disabled={loadingAction}
+                      className="mr-2 cursor-pointer disabled:opacity-50"
+                    >
+                      ➖
+                    </button>
+                    <span>{item.quantity}</span>
+                    <button
+                      onClick={() => {
+                        buttonAction("plus", item.slug, item.quantity);
+                      }}
+                      disabled={loadingAction}
+                      className="ml-2 cursor-pointer disabled:opacity-50"
+                    >
+                      ➕
+                    </button>
+                  </div>
+                  <span className="w-1/3 text-center">{item.price}</span>
+                </div>
+              ))}
+
+              {dropdown.length === 0 && (
+                <div className="text-center py-2 text-gray-500">
+                  No products found
+                </div>
+              )}
+            </div>
+          </div>
+        </form>
+        {/* Add a Product Heading */}
+
+        <div className="text-green-800 text-center">{alert}</div>
+        <h1 className="text-3xl font-bold mb-4 mx-20">Add a Product</h1>
+
+        {/* Add Product Form */}
+        <form className="my-4 flex flex-col justify-between items-center">
+          {/* Product Name Field */}
+          <label className="flex flex-col mb-2" htmlFor="productName">
+            Product Name:
+            <input
+              type="text"
+              id="productName"
+              name="slug"
+              className="border p-2"
+              value={productForm?.slug || ""}
+              onChange={handleChange}
+            />
+          </label>
+
+          {/* Quantity Field */}
+          <label className="flex flex-col mb-2" htmlFor="quantity">
+            Quantity:
+            <input
+              type="number"
+              id="quantity"
+              name="quantity"
+              className="border p-2"
+              value={productForm?.quantity || ""}
+              onChange={handleChange}
+            />
+          </label>
+
+          {/* Price Field */}
+          <label className="flex flex-col mb-2" htmlFor="price">
+            Price:
+            <input
+              type="number"
+              id="price"
+              name="price"
+              step="0.01"
+              className="border p-2"
+              value={productForm?.price || ""}
+              onChange={handleChange}
+            />
+          </label>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={addProduct}
+          >
+            Add Product
+          </button>
+        </form>
+
+        {/* Display Current Stock */}
+        <div>
+          {/* Display Current Stock Heading */}
+          <h1 className="text-3xl font-bold mb-4 mx-20">Display Current Stock</h1>
+
+          {/* Stock Table */}
+          <table className="table-auto w-[90%] mx-auto">
+            <thead>
+              <tr>
+                <th className="border px-4 py-2">Product Name</th>
+                <th className="border px-4 py-2">Quantity</th>
+                <th className="border px-4 py-2">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+  {products.map((item) => (
+    <tr key={item.id}>
+      {/* Product Name */}
+      <td className="border px-4 py-2 items-center">
+        <div className="mr-5 inline-block w-4/5">{item.slug}</div>
+        <button
+          onClick={() => clicked(item.slug)}
+          className="cusrsor-pointer disabled:opacity-50"
+        >
+          <FaPen />
+        </button>
+      </td>
+      
+      {/* Quantity */}
+      <td className="border px-4 py-2 flex justify-around">
+        <button
+          onClick={() => {
+            displayButtonAction("minus", item.slug, item.quantity);
+          }}
+          disabled={loadingAction}
+          className="mr-2 cursor-pointer disabled:opacity-50"
+        >
+          ➖
+        </button>
+        <span className="mr-2">{item.quantity}</span>
+        <button
+          onClick={() => {
+            displayButtonAction("plus", item.slug, item.quantity);
+          }}
+          disabled={loadingAction}
+          className="cursor-pointer disabled:opacity-50"
+        >
+          ➕
+        </button>
+      </td>
+      
+      {/* Price */}
+      <td className="border px-4 py-2 text-center">₹{item.price}</td>
+    </tr>
+  ))}
+</tbody>
+
+          </table>
         </div>
+
+        {popup && (
+          <div className="border-2 border-gray-800 p-4 w-64 text-center mx-auto bg-gray-100 shadow-md">
+            <div className="block mb-2 text-xl font-bold">Relpace With</div>
+
+            <label
+              className="block mb-2 text-md font-semibold"
+              htmlFor="updateProductName"
+            >
+              Product Name:
+              <input
+                type="text"
+                id="updateproductName"
+                name="slug"
+                className="border p-2 w-full"
+                value={updateProductForm?.slug}
+                onChange={handleUpdateChange}
+              />
+            </label>
+
+            {/* Quantity Field */}
+            <label
+              className="block mb-2 text-md font-semibold"
+              htmlFor="updateQuantity"
+            >
+              Quantity:
+              <input
+                type="number"
+                id="updateQuantity"
+                name="updateQuantity"
+                className="border p-2 w-full"
+                value={updateProductForm?.quantity}
+                onChange={handleUpdateChange}
+              />
+            </label>
+
+            {/* Price Field */}
+            <label
+              className="block mb-2 text-md font-semibold"
+              htmlFor="updatePrice"
+            >
+              Price:
+              <input
+                type="number"
+                id="updatePrice"
+                name="updatePrice"
+                step="0.01"
+                className="border p-2 w-full"
+                value={updateProductForm?.price}
+                onChange={handleUpdateChange}
+              />
+            </label>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700"
+              onClick={updateProduct}
+            >
+              Update Product
+            </button>
+          </div>
+        )}
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </>
   );
 }
